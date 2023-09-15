@@ -57,13 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function gameOver(message) {
     clearInterval(timerInterval);
     gameOverMessage.textContent = message;
-    // gameOverModal.classList.remove('hidden');
+    gameOverModal.classList.remove('hidden');
     gameOverModal.style.display=''
   }
 
   restartButton.addEventListener('click', () => {
     gameOverModal.style.display= 'none'
-    //gameOverModal.classList.add('hidden');
+    gameOverModal.classList.add('hidden');
     score = 0;
     scoreDisplay.textContent = `Score: ${score}`;
     timeLeft = 170;

@@ -64,46 +64,47 @@ export class GameBoard {
         this.render();
     }
 
- swapTiles(column1, row1, column2, row2) {
-    const tile1 = this.tiles[column1][row1];
-    const tile2 = this.tiles[column2][row2];
-
-    // Temporarily swap the tiles
-    const tempType = tile1.type;
-    tile1.type = tile2.type;
-    tile2.type = tempType;
-
-    // Check for matches after the temporary swap
-    const totalMatches = this.checkForMatches();
-
-    if (totalMatches > 0) {
-        // Matches found, update the score
-        this.updateScore(totalMatches);
-    } else {
-        // No matches found, revert the swap
-        tile2.type = tile1.type;
-        tile1.type = tempType;
+    swapTiles(column1, row1, column2, row2) {
+        const tile1 = this.tiles[column1][row1];
+        const tile2 = this.tiles[column2][row2];
+    
+        // Intercambio de tipos de manera más directa
+        [tile1.type, tile2.type] = [tile2.type, tile1.type];
+    
+        const totalMatches = this.checkForMatches();
+    
+        if (totalMatches > 0) {
+            this.updateScore(totalMatches);
+        } else {
+            // Revertir el intercambio si no hay coincidencias
+            [tile1.type, tile2.type] = [tile2.type, tile1.type];
+        }
+        this.render();
     }
-    this.render();
-}
     
     checkForMatches() {
-        let matchesFound = false;
         let totalMatches = 0;
+        let matchesFound;
     
         do {
+            matchesFound = false;
+    
             const horizontalMatches = this.checkHorizontalMatches();
             const verticalMatches = this.checkVerticalMatches();
     
             totalMatches += horizontalMatches + verticalMatches;
     
             this.refillBoard();
-            matchesFound = this.hasMatches();
+    
+            if (this.hasMatches()) {
+                matchesFound = true;
+            }
+    
         } while (matchesFound);
     
         return totalMatches;
     }
-
+    
     findMatches(isHorizontal) {
         let matchCount = 0;
         const rowCount = isHorizontal ? this.numRows : this.numColumns;
@@ -120,11 +121,7 @@ export class GameBoard {
                 } else {
                     if (matchLength >= 3) {
                         matchCount += matchLength;
-                        for (let m = 0; m < matchLength; m++) {
-                            const x = isHorizontal ? j - 1 - m : i;
-                            const y = isHorizontal ? i : j - 1 - m;
-                            this.tiles[x][y].type = null;
-                        }
+                        this.clearTiles(isHorizontal, j - 1, i, matchLength);
                     }
                     matchLength = 1;
                 }
@@ -132,96 +129,96 @@ export class GameBoard {
     
             if (matchLength >= 3) {
                 matchCount += matchLength;
-                for (let m = 0; m < matchLength; m++) {
-                    const x = isHorizontal ? colCount - 1 - m : i;
-                    const y = isHorizontal ? i : rowCount - 1 - m;
-                    this.tiles[x][y].type = null;
-                }
+                this.clearTiles(isHorizontal, colCount - 1, i, matchLength);
             }
         }
-    
         return matchCount;
     }
-
-   // Updated to match more than 3 and fixed null-check
-   checkHorizontalMatches() {
-    return this.findMatches(true);
-}
-
-// Similar changes for vertical matches
-checkVerticalMatches() {
-    return this.findMatches(false);
-
-}
-    refillBoard() {
-        const tileClassNames = ['blue', 'green', 'purple', 'red', 'yellow'];
-        const numTileTypes = tileClassNames.length;
-
-        for (let column = 0; column < this.numColumns; column++) {
-            let shiftAmount = 0;
-
-            // Shift existing tiles down
-            for (let row = this.numRows - 1; row >= 0; row--) {
-                if (this.tiles[column][row].type === null) {
-                    shiftAmount++;
-                } else if (shiftAmount > 0) {
-                    this.tiles[column][row + shiftAmount] = this.tiles[column][row];
-                    this.tiles[column][row] = { type: null };
-                }
-            }
-
-            // Fill the top with new tiles
-            for (let row = 0; row < shiftAmount; row++) {
-                const randomIndex = Math.floor(Math.random() * numTileTypes);
-                this.tiles[column][row] = { type: tileClassNames[randomIndex] };
+    
+    clearTiles(isHorizontal, x, y, length) {
+        for (let m = 0; m < length; m++) {
+            const posX = isHorizontal ? x - m : y;
+            const posY = isHorizontal ? y : x - m;
+            if (this.tiles[posX] && this.tiles[posX][posY]) {
+                this.tiles[posX][posY].type = null;
             }
         }
     }
+    
+    checkHorizontalMatches() {
+        return this.findMatches(true);
+    }
+    
+    checkVerticalMatches() {
+        return this.findMatches(false);
+    }
+    
+    refillBoard() {
+        const tileTypes = ['blue', 'green', 'purple', 'red', 'yellow'];
+    
+        for (let col = 0; col < this.numColumns; col++) {
+            let emptySlots = 0;
+    
+            // Bajar los tiles existentes
+            for (let row = this.numRows - 1; row >= 0; row--) {
+                if (this.tiles[col][row] && this.tiles[col][row].type === null) {
+                    emptySlots++;
+                } else if (emptySlots > 0) {
+                    this.moveTileDown(col, row, emptySlots);
+                }
+            }
+    
+            // Rellenar los espacios vacíos con nuevos tiles
+            this.fillEmptySlots(col, emptySlots, tileTypes);
+        }
+    }
+    
+    moveTileDown(column, row, shiftAmount) {
+        this.tiles[column][row + shiftAmount] = this.tiles[column][row];
+        this.tiles[column][row] = { type: null };
+    }
+    
+    fillEmptySlots(column, shiftAmount, tileTypes) {
+        for (let row = 0; row < shiftAmount; row++) {
+            const randomType = tileTypes[Math.floor(Math.random() * tileTypes.length)];
+            this.tiles[column][row] = { type: randomType };
+        }
+    }
+    
 
     hasMatches() {
-        for (let row = 0; row < this.numRows; row++) {
-            for (let column = 0; column < this.numColumns - 2; column++) {
-                const currentTile = this.tiles[column][row];
-                const nextTile1 = this.tiles[column + 1][row];
-                const nextTile2 = this.tiles[column + 2][row];
+        return this.checkDirectionalMatches(true) || this.checkDirectionalMatches(false);
+    }
     
-                if (currentTile && nextTile1 && nextTile2 &&
-                    currentTile.type === nextTile1.type && 
-                    currentTile.type === nextTile2.type
+    checkDirectionalMatches(isHorizontal) {
+        const rowCount = isHorizontal ? this.numRows : this.numColumns;
+        const colCount = isHorizontal ? this.numColumns : this.numRows;
+    
+        for (let i = 0; i < rowCount; i++) {
+            for (let j = 0; j < colCount - 2; j++) {
+                const tile1 = isHorizontal ? this.tiles[j][i] : this.tiles[i][j];
+                const tile2 = isHorizontal ? this.tiles[j + 1][i] : this.tiles[i][j + 1];
+                const tile3 = isHorizontal ? this.tiles[j + 2][i] : this.tiles[i][j + 2];
+    
+                if (tile1 && tile2 && tile3 &&
+                    tile1.type === tile2.type &&
+                    tile1.type === tile3.type
                 ) {
                     return true;
                 }
             }
         }
-    
-        for (let column = 0; column < this.numColumns; column++) {
-            for (let row = 0; row < this.numRows - 2; row++) {
-                const currentTile = this.tiles[column][row];
-                const nextTile1 = this.tiles[column][row + 1];
-                const nextTile2 = this.tiles[column][row + 2];
-    
-                if (currentTile && nextTile1 && nextTile2 &&
-                    currentTile.type === nextTile1.type && 
-                    currentTile.type === nextTile2.type
-                ) {
-                    return true;
-                }
-            }
-        }
-    
         return false;
     }
-
-// Define the getTileColor function as you provided earlier
-
-static getTileColor(tileType) {
-    switch (tileType) {
-      case 'red': return "url('../access/red-orb.png')";
-      case 'blue': return "url('../access/blue-orb.png')";
-      case 'green': return "url('../access/green-orb.png')";
-      case 'yellow': return "url('../access/yellow-orb.png')";
-      case 'purple': return "url('../access/purple-orb.png')";
-      default: return 'gray';
+    
+    static getTileColor(tileType) {
+        switch (tileType) {
+          case 'red': return "url('../access/red-orb.png')";
+          case 'blue': return "url('../access/blue-orb.png')";
+          case 'green': return "url('../access/green-orb.png')";
+          case 'yellow': return "url('../access/yellow-orb.png')";
+          case 'purple': return "url('../access/purple-orb.png')";
+          default: return 'gray';
+        }
     }
-  }
 }
