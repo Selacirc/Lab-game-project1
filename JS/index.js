@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateScore(points) {
     score += points;
     scoreDisplay.textContent = `Score: ${score}`;
-    if (score >= 80) {
+    if (score >= 5) {
       gameOver("You won!");
     }
   }
